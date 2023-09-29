@@ -35,7 +35,9 @@ typedef NS_ENUM(NSInteger, RTCVideoViewObjectFit) {
      * The replaced content is sized to maintain its aspect ratio while filling
      * the element's entire content box.
      */
-    RTCVideoViewObjectFitCover
+    RTCVideoViewObjectFitCover,
+    //
+    RTCVideoViewObjectFitStretch
 };
 
 /**
@@ -196,7 +198,7 @@ typedef NS_ENUM(NSInteger, RTCVideoViewObjectFit) {
             newValue.size.width = width;
             newValue.size.height = height;
         }
-    } else {  // contain
+    } else if (RTCVideoViewObjectFitContain == self.objectFit) {  // contain
         // The implementation is in accord with
         // https://www.w3.org/TR/html5/embedded-content-0.html#the-video-element:
         //
@@ -209,6 +211,17 @@ typedef NS_ENUM(NSInteger, RTCVideoViewObjectFit) {
         // pillarboxed. Areas of the element's playback area that do not contain the
         // video represent nothing.
         newValue = AVMakeRectWithAspectRatioInsideRect(CGSizeMake(width, height), self.bounds);
+    } else { // stretch
+        newValue = self.bounds;
+        // CGFloat scaleFactor = MAX(newValue.size.width / width, newValue.size.height / height);
+        // Scale both width and height in order to make it obvious that the aspect
+        // ratio is preserved.
+        // width *= scaleFactor;
+        // height *= scaleFactor;
+        // newValue.origin.x += (newValue.size.width - width) / 2.0;
+        // newValue.origin.y += (newValue.size.height - height) / 2.0;
+        // newValue.size.width = width;
+        // newValue.size.height = height;
     }
 
     CGRect oldValue = subview.frame;
@@ -217,7 +230,11 @@ typedef NS_ENUM(NSInteger, RTCVideoViewObjectFit) {
         subview.frame = newValue;
     }
 
+if (RTCVideoViewObjectFitStretch) {
+    [subview.layer setAffineTransform:self.mirror ? CGAffineTransformMakeScale(-1.0, 1.0) : CGAffineTransformMakeScale(0.5, 0.6)];
+} else {
     [subview.layer setAffineTransform:self.mirror ? CGAffineTransformMakeScale(-1.0, 1.0) : CGAffineTransformIdentity];
+}
 }
 
 /**
@@ -390,8 +407,15 @@ RCT_EXPORT_VIEW_PROPERTY(mirror, BOOL)
  */
 RCT_CUSTOM_VIEW_PROPERTY(objectFit, NSString *, RTCVideoView) {
     NSString *s = [RCTConvert NSString:json];
-    RTCVideoViewObjectFit e =
-        (s && [s isEqualToString:@"cover"]) ? RTCVideoViewObjectFitCover : RTCVideoViewObjectFitContain;
+    RTCVideoViewObjectFit e = RTCVideoViewObjectFitCover;
+
+    if (s && [s isEqualToString:@"contain"]) {
+        e = RTCVideoViewObjectFitContain;
+    } else if (s && [s isEqualToString:@"stretch"]) {
+        e = RTCVideoViewObjectFitStretch;
+    }
+    // RTCVideoViewObjectFit e =
+    //     (s && [s isEqualToString:@"cover"]) ? RTCVideoViewObjectFitCover : RTCVideoViewObjectFitContain;
 
     view.objectFit = e;
 }
